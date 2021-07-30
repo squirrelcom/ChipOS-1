@@ -1,6 +1,6 @@
 #include "logic.h"
 
-typedef void (* ButtonClickedEventHandler)(PdaOS*, AppCalculator*);
+typedef void (* ButtonClickedEventHandler)(PCIOS*, AppCalculator*);
 
 static void clear(AppCalculator* app) {
   app->opcode2 = "";
@@ -93,7 +93,7 @@ static void onHighPriOpClicked(AppCalculator* app, const String &op) {
   //app->txtOpcode = app->opcode0;
 }
 
-static void onButtonNumClicked(PdaOS* os, AppCalculator* app, char n) {
+static void onButtonNumClicked(PCIOS* os, AppCalculator* app, char n) {
   app->numClicked = true;
   if (app->operand0 == "0")
     app->operand0 = "";
@@ -101,38 +101,38 @@ static void onButtonNumClicked(PdaOS* os, AppCalculator* app, char n) {
   app->txtResult = app->operand0;
 }
 
-static void onButton0Clicked(PdaOS* os, AppCalculator* app) {
+static void onButton0Clicked(PCIOS* os, AppCalculator* app) {
   app->numClicked = true;
   if (app->operand0 != "0")
     app->operand0 += '0';
   app->txtResult = app->operand0;
 }
 
-static void onButton1Clicked(PdaOS* os, AppCalculator* app) {
+static void onButton1Clicked(PCIOS* os, AppCalculator* app) {
   onButtonNumClicked(os, app, '1');
 }
 
-static void onButton2Clicked(PdaOS* os, AppCalculator* app) {
+static void onButton2Clicked(PCIOS* os, AppCalculator* app) {
   onButtonNumClicked(os, app, '2');
 }
 
-static void onButton3Clicked(PdaOS* os, AppCalculator* app) {
+static void onButton3Clicked(PCIOS* os, AppCalculator* app) {
   onButtonNumClicked(os, app, '3');
 }
 
-static void onButton4Clicked(PdaOS* os, AppCalculator* app) {
+static void onButton4Clicked(PCIOS* os, AppCalculator* app) {
   onButtonNumClicked(os, app, '4');
 }
 
-static void onButton5Clicked(PdaOS* os, AppCalculator* app) {
+static void onButton5Clicked(PCIOS* os, AppCalculator* app) {
   onButtonNumClicked(os, app, '4');
 }
 
-static void onButton6Clicked(PdaOS* os, AppCalculator* app) {
+static void onButton6Clicked(PCIOS* os, AppCalculator* app) {
   onButtonNumClicked(os, app, '6');
 }
 
-static void onButton7Clicked(PdaOS* os, AppCalculator* app) {
+static void onButton7Clicked(PCIOS* os, AppCalculator* app) {
   onButtonNumClicked(os, app, '7');
 }
 
@@ -140,11 +140,11 @@ static void onButton8Clicked(PdaOS* os, AppCalculator* app) {
   onButtonNumClicked(os, app, '8');
 }
 
-static void onButton9Clicked(PdaOS* os, AppCalculator* app) {
+static void onButton9Clicked(PCIOS* os, AppCalculator* app) {
   onButtonNumClicked(os, app, '9');
 }
 
-static void onButtonDotClicked(PdaOS* os, AppCalculator* app) {
+static void onButtonDotClicked(PCIOS* os, AppCalculator* app) {
   app->numClicked = true;
   if (app->dotClicked)
     return;
@@ -153,23 +153,23 @@ static void onButtonDotClicked(PdaOS* os, AppCalculator* app) {
   app->dotClicked = true;
 }
 
-static void onButtonAddClicked(PdaOS* os, AppCalculator* app) {
+static void onButtonAddClicked(PCIOS* os, AppCalculator* app) {
   onLowPriOpClicked(app, "+");
 }
 
-static void onButtonMinClicked(PdaOS* os, AppCalculator* app) {
+static void onButtonMinClicked(PCIOS* os, AppCalculator* app) {
   onLowPriOpClicked(app, "-");
 }
 
-static void onButtonMulClicked(PdaOS* os, AppCalculator* app) {
+static void onButtonMulClicked(PCIOS* os, AppCalculator* app) {
   onHighPriOpClicked(app, "*");
 }
 
-static void onButtonDivClicked(PdaOS* os, AppCalculator* app) {
+static void onButtonDivClicked(PCIOS* os, AppCalculator* app) {
   onHighPriOpClicked(app, "/");
 }
 
-static void onButtonEvalClicked(PdaOS* os, AppCalculator* app) {
+static void onButtonEvalClicked(PCIOS* os, AppCalculator* app) {
   if (app->opcode0 != "") {
     app->dotClicked = false;
     app->numClicked = false;
@@ -191,11 +191,11 @@ static void onButtonEvalClicked(PdaOS* os, AppCalculator* app) {
   app->txtResult = app->operand0;
 }
 
-static void onButtonClearClicked(PdaOS* os, AppCalculator* app) {
+static void onButtonClearClicked(PCIOS* os, AppCalculator* app) {
   clear(app);
 }
 
-static void onButtonReverseClicked(PdaOS* os, AppCalculator* app) {
+static void onButtonReverseClicked(PCIOS* os, AppCalculator* app) {
   if (app->operand0 == "0")
       return;
   if (app->operand0.length() != 0 && app->operand0.startsWith("-"))
@@ -205,7 +205,7 @@ static void onButtonReverseClicked(PdaOS* os, AppCalculator* app) {
   app->txtResult = app->operand0;
 }
 
-static void onButtonPercentageClicked(PdaOS* os, AppCalculator* app) {
+static void onButtonPercentageClicked(PCIOS* os, AppCalculator* app) {
   app->numClicked = true;
   if (app->operand0 == "0")
       return;
@@ -213,14 +213,14 @@ static void onButtonPercentageClicked(PdaOS* os, AppCalculator* app) {
   app->txtResult = app->operand0;
 }
 
-static void onButton00Clicked(PdaOS* os, AppCalculator* app) {
+static void onButton00Clicked(PCIOS* os, AppCalculator* app) {
   app->numClicked = true;
   if (app->operand0 != "0")
       app->operand0 += "00";
   app->txtResult = app->operand0;
 }
 
-static void update(PdaOS* os, AppCalculator* app) {
+static void update(PCIOS* os, AppCalculator* app) {
   const ButtonClickedEventHandler handlers[] = {
     onButton7Clicked, onButton8Clicked, onButton9Clicked, onButtonDivClicked, onButtonClearClicked,
     onButton4Clicked, onButton5Clicked, onButton6Clicked, onButtonMulClicked, onButtonReverseClicked,
@@ -254,7 +254,7 @@ static void update(PdaOS* os, AppCalculator* app) {
   }
 }
 
-static void draw(PdaOS* os, AppCalculator* app) {
+static void draw(PCIOS* os, AppCalculator* app) {
   os->arduboy->drawRect(5, 5, 118, 13, WHITE);
   os->arduboy->setCursor(8, 8);
   os->arduboy->print(app->txtResult);
@@ -286,7 +286,7 @@ static void draw(PdaOS* os, AppCalculator* app) {
   os->arduboy->drawRect(x + app->cursor.x * (w + ix) - 1, y + app->cursor.y * (h + iy) - 1, w + 2, h + 2, WHITE);
 }
 
-void app_calculator(PdaOS* os) {
+void app_calculator(PCIOS* os) {
   AppCalculator* app = &os->calc;
   update(os, app);
   draw(os, app);
