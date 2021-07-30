@@ -1,6 +1,6 @@
 #include "logic.h"
 
-static void update(PdaOS* os, AppFlashlight* app) {
+static void update(PCIOS* os, AppFlashlight* app) {
   if (!app->always) {
     if (++app->tick >= app->interval) app->tick = 0;
   }
@@ -23,7 +23,7 @@ static void update(PdaOS* os, AppFlashlight* app) {
   }
 }
 
-static void draw(PdaOS* os, AppFlashlight* app) {
+static void draw(PCIOS* os, AppFlashlight* app) {
   if (app->always) {
     os->arduboy->fillRect(0, 0, 128, 64, WHITE);
     os->arduboy->setTextColor(BLACK);
@@ -50,7 +50,7 @@ static void draw(PdaOS* os, AppFlashlight* app) {
   os->arduboy->setTextBackground(BLACK);
 }
 
-void app_flashlight(PdaOS* os) {
+void app_flashlight(PCIOS* os) {
   AppFlashlight* app = &os->light;
   update(os, app);
   draw(os, app);
