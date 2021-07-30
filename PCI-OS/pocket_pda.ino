@@ -3,16 +3,16 @@
 #include "visual.h"
 #include <Arduboy2.h>
 
-static PdaOS OS;
+static PCIOS;
 static Arduboy2 A;
 
 static void intro(void) {
   for (char i = -8; i < 28; i = i + 2) {
     A.clear();
     A.setCursor(34, i);
-    A.print("Pocket PDA");
+    A.print("PCI/OS");
     A.setCursor(46, i + 8);
-    A.print("V0.8.0");
+    A.print("V0.0.1");
     delay(20);
     A.display();
   }
