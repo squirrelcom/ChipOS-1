@@ -1,6 +1,6 @@
 #include "logic.h"
 
-static void update(PdaOS* os, AppExchange* app) {
+static void update(PCIOS* os, AppExchange* app) {
   switch (input()) {
     case B_BUTTON:
       app->exit(); os->app = -os->app;
@@ -8,7 +8,7 @@ static void update(PdaOS* os, AppExchange* app) {
   }
 }
 
-static void draw(PdaOS* os, AppExchange* app) {
+static void draw(PCIOS* os, AppExchange* app) {
   os->arduboy->setCursor(16, 16);
   os->arduboy->print("1 USD = 6.88 CNY");
   os->arduboy->setCursor(16, 24);
@@ -19,7 +19,7 @@ static void draw(PdaOS* os, AppExchange* app) {
   os->arduboy->print("1 AUD = 5.19 CNY");
 }
 
-void app_finances(PdaOS* os) {
+void app_finances(PCIOS* os) {
   AppExchange* app = &os->exchange;
   update(os, app);
   draw(os, app);
