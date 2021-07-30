@@ -51,7 +51,7 @@ static void drawButton(PCIOS* os, int index, bool state) {
   os->arduboy->drawChar(x - CHAR_HALF_WIDTH, y - CHAR_HALF_HEIGHT, buttons[index].character, color, background, TEXT_SIZE);
 }
 
-static void update(PdaOS* os, AppController* app) {
+static void update(PCIOS* os, AppController* app) {
   uint8_t rls = 0;
   uint8_t pre = input(&rls);
   if (os->arduboy->pressed(LEFT_BUTTON + RIGHT_BUTTON + UP_BUTTON + DOWN_BUTTON + A_BUTTON + B_BUTTON)) {
