@@ -96,18 +96,18 @@ void AppCalendar::exit(void) {
   EEPROM.write(604, mo);
 }
 
-void AppController::init(PdaOS* os) {
+void AppController::init(PCIOS* os) {
   app_init_controller(os);
 }
 
 void AppController::exit(void) {
 }
 
-PdaOS::PdaOS() {
+PCIOS::PCIOS() {
   app = -APP_BEGIN;
 }
 
-PdaOS::~PdaOS() {
+PCIOS::~PCIOS() {
 }
 
 void load(void) {
