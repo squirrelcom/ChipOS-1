@@ -37,7 +37,7 @@ enum Apps {
   APP_END = APP_CONTROLLER + 1
 };
 
-struct PdaOS;
+struct PCIOS;
 
 struct AppCalculator {
   String txtResult;
@@ -105,11 +105,11 @@ struct AppCalendar {
 };
 
 struct AppController {
-  void init(PdaOS* os);
+  void init(PCIOS* os);
   void exit(void);
 };
 
-struct PdaOS {
+struct PCIOS {
   Arduboy2* arduboy;
   Operation* operation;
   int8_t app;
@@ -123,8 +123,8 @@ struct PdaOS {
   AppChronograph chronograph;
   AppCountdown count;
 
-  PdaOS();
-  ~PdaOS();
+  PCIOS();
+  ~PCIOS();
 };
 
 void load(void);
