@@ -1,4 +1,4 @@
 #include "logic.h"
 
-void app_games(PdaOS* os) {
+void app_games(PCIOS* os) {
 }
