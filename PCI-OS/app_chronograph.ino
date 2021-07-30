@@ -1,6 +1,6 @@
 #include "logic.h"
 
-static void update(PdaOS* os, AppChronograph* app) {
+static void update(PCIOS* os, AppChronograph* app) {
   switch (input()) {
     case A_BUTTON:
       app->paused = !app->paused;
@@ -12,7 +12,7 @@ static void update(PdaOS* os, AppChronograph* app) {
   }
 }
 
-static void draw(PdaOS* os, AppChronograph* app) {
+static void draw(PCIOS* os, AppChronograph* app) {
   uint8_t hr = app->sec / 60 / 60;
   uint8_t mi = (app->sec - hr * 60 * 60) / 60;
   uint8_t se = (app->sec - hr * 60 * 60 - mi * 60);
@@ -30,7 +30,7 @@ static void draw(PdaOS* os, AppChronograph* app) {
   os->arduboy->print((uint8_t)app->tick);
 }
 
-void app_update_chronograph(PdaOS* os) {
+void app_update_chronograph(PCIOS* os) {
   AppChronograph* app = &os->chronograph;
   if (!app->paused) {
     app->tick += 100.0f / FPS;
@@ -42,7 +42,7 @@ void app_update_chronograph(PdaOS* os) {
   }
 }
 
-void app_chronograph(PdaOS* os) {
+void app_chronograph(PCIOS* os) {
   AppChronograph* app = &os->chronograph;
   update(os, app);
   draw(os, app);
