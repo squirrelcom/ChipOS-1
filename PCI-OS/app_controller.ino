@@ -36,7 +36,7 @@ static Button buttons[] = {
   { B_BUTTON_KEY, B_BUTTON, 'B', 114, 26 }
 };
 
-static void drawButton(PdaOS* os, int index, bool state) {
+static void drawButton(PCIOS* os, int index, bool state) {
   uint8_t color = state ? BLACK : WHITE;
   uint8_t background = state ? WHITE : BLACK;
   uint8_t x = buttons[index].x;
@@ -73,12 +73,12 @@ static void update(PdaOS* os, AppController* app) {
   os->arduboy->print("Hold all keys to exit");
 }
 
-void app_init_controller(PdaOS* os) {
+void app_init_controller(PCIOS* os) {
   os->operation->init();
   Keyboard.begin();
 }
 
-void app_controller(PdaOS* os) {
+void app_controller(PCIOS* os) {
   AppController* app = &os->ctrl;
   update(os, app);
 }
