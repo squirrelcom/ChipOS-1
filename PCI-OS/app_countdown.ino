@@ -1,6 +1,6 @@
 #include "logic.h"
 
-static void modify(PdaOS* os, AppCountdown* app, int8_t d) {
+static void modify(PCIOS* os, AppCountdown* app, int8_t d) {
   switch (app->cursor) {
     case 0:
       app->sec += d;
@@ -26,7 +26,7 @@ static void modify(PdaOS* os, AppCountdown* app, int8_t d) {
   else if (app->sec > 28800) { app->sec = 28800; app->tick = 0; }
 }
 
-static void update(PdaOS* os, AppCountdown* app) {
+static void update(PCIOS* os, AppCountdown* app) {
   switch (input()) {
     case LEFT_BUTTON:
       if (app->paused) {
@@ -56,7 +56,7 @@ static void update(PdaOS* os, AppCountdown* app) {
   }
 }
 
-static void draw(PdaOS* os, AppCountdown* app) {
+static void draw(PCIOS* os, AppCountdown* app) {
   uint8_t hr = app->sec / 60 / 60;
   uint8_t mi = (app->sec - hr * 60 * 60) / 60;
   uint8_t se = (app->sec - hr * 60 * 60 - mi * 60);
@@ -77,13 +77,13 @@ static void draw(PdaOS* os, AppCountdown* app) {
   }
 }
 
-static void timeup(PdaOS* os, AppCountdown* app) {
+static void timeup(PCIOS* os, AppCountdown* app) {
   os->app = APP_FLASHLIGHT;
   os->light.init();
   os->light.always = false;
 }
 
-void app_update_countdown(PdaOS* os) {
+void app_update_countdown(PCIOS* os) {
   AppCountdown* app = &os->count;
   if (!app->paused) {
     app->tick -= 100.0f / FPS;
@@ -103,7 +103,7 @@ void app_update_countdown(PdaOS* os) {
   }
 }
 
-void app_countdown(PdaOS* os) {
+void app_countdown(PCIOS* os) {
   AppCountdown* app = &os->count;
   update(os, app);
   draw(os, app);
