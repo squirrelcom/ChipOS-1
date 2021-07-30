@@ -13,7 +13,7 @@ static uint8_t getDayOfWeek(uint32_t yr, uint8_t mo, uint8_t d) {
   return (d += mo < 3 ? yr-- : yr - 2, 23 * mo / 9 + d + 4 + yr / 4 - yr / 100 + yr / 400) % 7;
 }
 
-static void update(PdaOS* os, AppCalendar* app) {
+static void update(PCIOS* os, AppCalendar* app) {
   switch (input()) {
     case LEFT_BUTTON:
       if (--app->yr < 1970) app->yr = 1970;
@@ -41,7 +41,7 @@ static void update(PdaOS* os, AppCalendar* app) {
   }
 }
 
-static void draw(PdaOS* os, AppCalendar* app) {
+static void draw(PCIOS* os, AppCalendar* app) {
   uint8_t days = getDaysOfMonth(app->yr, app->mo);
   uint8_t day = getDayOfWeek(app->yr, app->mo, 1);
   os->arduboy->setCursor(40, 0);
@@ -63,7 +63,7 @@ static void draw(PdaOS* os, AppCalendar* app) {
   }
 }
 
-void app_calendar(PdaOS* os) {
+void app_calendar(PCIOS* os) {
   AppCalendar* app = &os->calendar;
   update(os, app);
   draw(os, app);
