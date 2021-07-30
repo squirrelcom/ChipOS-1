@@ -2,20 +2,20 @@
 
 static Operation P;
 
-extern void app_update_chronograph(PdaOS* os);
-extern void app_update_countdown(PdaOS* os);
+extern void app_update_chronograph(PCIOS* os);
+extern void app_update_countdown(PCIOS* os);
 
-extern void app_calculator(PdaOS* os);
-extern void app_flashlight(PdaOS* os);
-extern void app_finances(PdaOS* os);
-extern void app_chronograph(PdaOS* os);
-extern void app_countdown(PdaOS* os);
-extern void app_calendar(PdaOS* os);
-extern void app_games(PdaOS* os);
-extern void app_controller(PdaOS* os);
-extern void app_todo(PdaOS* os);
+extern void app_calculator(PCIOS* os);
+extern void app_flashlight(PCIOS* os);
+extern void app_finances(PCIOS* os);
+extern void app_chronograph(PCIOS* os);
+extern void app_countdown(PCIOS* os);
+extern void app_calendar(PCIOS* os);
+extern void app_games(PCIOS* os);
+extern void app_controller(PCIOS* os);
+extern void app_todo(PCIOS* os);
 
-static void init(PdaOS* os) {
+static void init(PCIOS* os) {
   switch (os->app) {
     case APP_CALCULATOR: os->calc.init(); break;
     case APP_FLASHLIGHT: os->light.init(); break;
@@ -30,7 +30,7 @@ static void init(PdaOS* os) {
   }
 }
 
-static void menu(PdaOS* os) {
+static void menu(PCIOS* os) {
   int8_t &app = os->app;
   switch (input()) {
     case LEFT_BUTTON:
@@ -121,13 +121,13 @@ uint8_t input(uint8_t* r) {
   return result;
 }
 
-void initLogic(PdaOS* os) {
+void initLogic(PCIOS* os) {
   os->operation = &P;
   os->chronograph.init();
   os->count.init();
 }
 
-void run(PdaOS* os) {
+void run(PCIOS* os) {
   switch (os->app) {
     case APP_CALCULATOR: app_calculator(os); break;
     case APP_FLASHLIGHT: app_flashlight(os); break;
