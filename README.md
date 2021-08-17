@@ -1,4 +1,4 @@
-# Pocket PDA
+# ChipOS-1
 
 **Copyright (C) 2017 [Wang Renxin](https://github.com/paladin-t/). All rights reserved.**
 
