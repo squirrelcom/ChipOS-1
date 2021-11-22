@@ -10,7 +10,7 @@ static void intro(void) {
   for (char i = -8; i < 28; i = i + 2) {
     A.clear();
     A.setCursor(34, i);
-    A.print("PCI/OS");
+    A.print("ChipOS VR");
     A.setCursor(46, i + 8);
     A.print("V0.0.1");
     delay(20);
