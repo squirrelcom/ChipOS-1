@@ -1,419 +1,690 @@
-int8_t state = 0;
-#define COLUMNS  14
-#define ROWS 8
-float moveX;
-int8_t moveY;
-float ballX;
-int8_t ballY;
-bool released;
-bool Free;
-int8_t xPaddle;
-bool isHit[ROWS][COLUMNS];
-bool bounced = false;
-int8_t lives = 3;
-int8_t level = 1;
-int16_t score = 0;
-uint16_t tmpScore = 0;
-// DO NOT CHANGE THE DATATYPE, it will screw up HSE!
-int16_t brickCount;
-char initials[3];
-bool flash = true;
+// raycasterAB
+// Copyright(C) 2019 John D. Corrado
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
 
-#include <Arduboy.h>
-Arduboy arduboy;
+#include <Arduboy2.h>
+#include <FixedPoints.h>
+#include <FixedPointsCommon.h>
 
+struct Door
+{
+  int16_t mapIndex;
+  uint8_t state;
+  SQ15x16 offset;
+  uint8_t tics;
+};
 
-void Paddle() {
-  //Move right
-  if (xPaddle < WIDTH - 32) if (arduboy.pressed(RIGHT_BUTTON)) xPaddle = xPaddle + 2;
-  //Move left
-  if (xPaddle > 0) if (arduboy.pressed(LEFT_BUTTON)) xPaddle = xPaddle - 2;
-  //prevent it from going over to the sides
-  if (xPaddle < 1) xPaddle = 0;
-  if (xPaddle > WIDTH - 34) xPaddle = WIDTH - 34;
-  arduboy.drawRect(xPaddle, 62, 16, 1, 1);
-}
-void Ball() {
-  if (Free) {
-    //Move ball
-    ballX = ballX + moveX;
-    ballY = ballY + moveY;
-    //Bounce off top edge
-    if (ballY <= 1) {
-      ballY = 1;
-      moveY = -moveY;
-      arduboy.tunes.tone(523, 200);
-    }
-    //Lose a life if bottom edge hit
-    if (ballY >= HEIGHT) {
-      arduboy.tunes.tone(175, 200);
-      delay(250);
-      ballY = 60;
-      Free = false;
-      lives = lives - 1;
-    }
-    //Bounce off left side
-    if (ballX < 1) {
-      ballX = 1;
-      moveX = -moveX;
-      arduboy.tunes.tone(523, 200);
-    }
-    //Bounce off right side
-    if (ballX > WIDTH - 20) {
-      ballX = WIDTH - 20;
-      moveX = -moveX;
-      arduboy.tunes.tone(523, 200);
-    }
-    //Bounce off paddle
-    if (ballX + 1 >= xPaddle && ballX <= xPaddle + 17 && ballY + 2 >= 63 && ballY <= 64) {
-      moveY = -moveY;
-      moveX = moveX + (ballX - (xPaddle + 7)) / 4; //Applies spin on the ball
-      //limit horizontal speed
-      if (moveX < -1.5) moveX = -1.5;
-      if (moveX > 1.5)  moveX =  1.5;
-      arduboy.tunes.tone(200, 200);
-    }
-    //Reset Bounce
-    bounced = false;
-  } else {
-    //Ball follows paddle
-    ballX = xPaddle + 7;
-    ballY = 60;
-    //Release ball if FIRE pressed
-    if (arduboy.pressed(B_BUTTON) && released) {
-      Free = true;
-      if (arduboy.pressed(LEFT_BUTTON) || arduboy.pressed(RIGHT_BUTTON)) {
-        if (arduboy.pressed(LEFT_BUTTON)) moveX = 0.5;
-        else moveX = -0.5;
-      } else moveX = random(-1, 1) / 2;
-      //Ball heads upwards
-      moveY = -1;
-    }
-  }
-  arduboy.drawRect(ballX, floor(ballY), 2, 2, 1);
-}
-void Brick() {
-  //Bounce off Bricks
-  for (int8_t row = 0; row < ROWS; row++) {
-    for (int8_t column = 0; column < COLUMNS; column++) {
-      if (!isHit[row][column]) {
-        if ((row / 2) % 2 == 0) arduboy.drawRect(8 * column, 2 + 3 * row, 8, 4, 1);
-        else arduboy.fillRect(8 * column, 2 + 3 * row, 8, 4, 1);
-        //If A collison has occured
-        if (ballY <= 3 * row + 4 && ballY + 2 >= 3 * row + 1 &&
-            ballX <= 8 * column + 8 && ballX + 2 >= 8 * column) {
-          score = score + 8;
-          brickCount++;
-          isHit[row][column] = true;
-          //Vertical collision
-          if (ballY + 2 > 3 * row + 4 || ballY < 3 * row + 1) {
-            //Only bounce once each ball move
-            if (!bounced) {
-              moveY = - moveY;
-              bounced = true;
-              arduboy.tunes.tone(261, 200);
-            }
-          }
-          //Hoizontal collision
-          else if (ballX < 10 * column + 15 || ballX + 2 > 10 * column + 25) {
-            //Only bounce once brick each ball move
-            if (!bounced) {
-              moveX = - moveX;
-              bounced = true;
-              arduboy.tunes.tone(261, 200);
-            }
-          }
-        }
-      }
-    }
-  }
-}
-void resetlevel() {
-  xPaddle = 50;
-  brickCount = 0;
-  Free = false;
-  ballY = 60;
-  for (int8_t row = 0; row < ROWS; row++)
-    for (int8_t column = 0; column < COLUMNS; column++)
-      isHit[row][column] = false;
-}
-void resetGame() {
-  resetlevel();
-  level = 1;
-  lives = 3;
-  score = 0;
-  state = 0;
-}
-void Statistics() {
-  arduboy.setCursor(118, 15);
-  arduboy.print(level);
-  arduboy.setCursor(118, 30);
-  arduboy.print(lives);
-  arduboy.setCursor(112, 50);
-  arduboy.print(score);
-  if ((brickCount == ROWS * COLUMNS) && level < 2) {
-    resetlevel();
-    level = level + 1;
-  }
-}
-void enterInitials() {
-  int8_t index = 0;
-  initials[0] = ' ';
-  initials[1] = ' ';
-  initials[2] = ' ';
-  while (index < 3) {
-    arduboy.clear();
-    arduboy.setCursor(16, 0);
-    arduboy.print("HIGH SCORE");
-    arduboy.setCursor(88, 0);
-    arduboy.print(score);
-    arduboy.setCursor(56, 20);
-    arduboy.print(initials[0]);
-    arduboy.setCursor(64, 20);
-    arduboy.print(initials[1]);
-    arduboy.setCursor(72, 20);
-    arduboy.print(initials[2]);
-    for (int8_t i = 0; i < 3; i++) {
-      arduboy.drawLine(55 + (i * 8), 27, 56 + (i * 8) + 6, 27, 1);
-    }
-    arduboy.drawLine(56 + (index * 8), 28, 56 + (index * 8) + 6, 28, 1);
-    delay(150);
-    if (arduboy.pressed(LEFT_BUTTON) && released) {
-      released = false;
-      arduboy.tunes.tone(1046, 200);
-      index--;
-      if (index < 0) index = 0;
-    }
+Arduboy2 arduboy;
 
-    if (arduboy.pressed(RIGHT_BUTTON) && released) {
-      released = false;
-      index++;
-      if (index > 2) index = 2;
-      arduboy.tunes.tone(1046, 200);
-    }
+const SQ15x16 PROGMEM sinTable[64] =
+{
+  0.0122715, 0.0368072, 0.0613207, 0.0857973, 0.110222, 0.134581, 0.158858, 0.18304, 0.207111, 0.231058, 0.254866, 0.27852, 0.302006, 0.32531, 0.348419, 0.371317,
+  0.393992, 0.41643, 0.438616, 0.460539, 0.482184, 0.503538, 0.52459, 0.545325, 0.565732, 0.585798, 0.605511, 0.624859, 0.643832, 0.662416, 0.680601, 0.698376,
+  0.715731, 0.732654, 0.749136, 0.765167, 0.780737, 0.795837, 0.810457, 0.824589, 0.838225, 0.851355, 0.863973, 0.87607, 0.88764, 0.898674, 0.909168, 0.919114,
+  0.928506, 0.937339, 0.945607, 0.953306, 0.960431, 0.966976, 0.97294, 0.978317, 0.983105, 0.987301, 0.990903, 0.993907, 0.996313, 0.998118, 0.999322, 0.999925
+};
 
-    if (arduboy.pressed(DOWN_BUTTON)) {
-      initials[index]++;
-      arduboy.tunes.tone(523, 150);
-      // A-Z 0-9 :-? !-/ ' '
-      if (initials[index] == '0') initials[index] = ' ';
-      if (initials[index] == '!') initials[index] = 'A';
-      if (initials[index] == '[') initials[index] = '0';
-      if (initials[index] == '@') initials[index] = '!';
-    }
-    if (arduboy.pressed(UP_BUTTON)) {
-      initials[index]--;
-      arduboy.tunes.tone(523, 150);
-      if (initials[index] == ' ') initials[index] = '?';
-      if (initials[index] == '/') initials[index] = 'Z';
-      if (initials[index] == 31)  initials[index] = '/';
-      if (initials[index] == '@') initials[index] = ' ';
-    }
-    if (arduboy.pressed(A_BUTTON)) {
-      if (index >= 2) {
-        index = index + 1;
-        arduboy.tunes.tone(1046, 200);
-      }
-    }
-    if (arduboy.notPressed(LEFT_BUTTON) && arduboy.notPressed(RIGHT_BUTTON))
-      released = true;
-    arduboy.display();
-  }
-}
+const SQ15x16 PROGMEM tanTable[64] =
+{
+  0.0122725, 0.0368322, 0.0614364, 0.0861149, 0.110898, 0.135816, 0.160901, 0.186185, 0.211702, 0.237484, 0.26357, 0.289995, 0.316799, 0.344023, 0.37171, 0.399908,
+  0.428665, 0.458034, 0.48807, 0.518835, 0.550394, 0.582817, 0.616182, 0.650571, 0.686077, 0.722799, 0.760848, 0.800345, 0.841426, 0.884239, 0.928952, 0.975753,
+  1.02485, 1.07648, 1.13092, 1.18846, 1.24946, 1.31432, 1.38351, 1.45756, 1.53711, 1.6229, 1.7158, 1.81688, 1.92739, 2.04889, 2.18325, 2.33282,
+  2.50057, 2.69027, 2.90679, 3.15658, 3.44834, 3.79406, 4.2108, 4.72363, 5.37099, 6.21499, 7.36289, 9.0173, 11.6124, 16.277, 27.1502, 81.4832
+};
 
+const SQ15x16 heightToDistanceTable[32] =
+{
+  1, 1.03226, 1.06667, 1.10345, 1.14286, 1.18519, 1.23077, 1.28, 1.33333, 1.3913, 1.45455, 1.52381, 1.6, 1.68421, 1.77778, 1.88235,
+  2, 2.13333, 2.28571, 2.46154, 2.66667, 2.90909, 3.2, 3.55556, 4, 4.57143, 5.33333, 6.4, 8, 10.6667, 16, 32
+};
 
+const uint8_t wallData[16] =
+{
+  0xFF, 0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F
+};
 
-void setup() {
+const uint8_t mapWidth = 20;
+const uint8_t mapHeight = 20;
+
+const uint8_t PROGMEM mapData[mapWidth * mapHeight] =
+{
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+  1, 0, 0, 1, 1, 2, 1, 1, 0, 0, 0, 0, 1, 1, 2, 1, 1, 0, 0, 1,
+  1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1,
+  1, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 1,
+  1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1,
+  1, 0, 0, 1, 1, 2, 1, 1, 0, 0, 0, 0, 1, 1, 2, 1, 1, 0, 0, 1,
+  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+  1, 0, 0, 1, 1, 2, 1, 1, 0, 0, 0, 0, 1, 1, 2, 1, 1, 0, 0, 1,
+  1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1,
+  1, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 1,
+  1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1,
+  1, 0, 0, 1, 1, 2, 1, 1, 0, 0, 0, 0, 1, 1, 2, 1, 1, 0, 0, 1,
+  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+};
+
+Door doors[64] =
+{
+  { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 },
+  { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 },
+  { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 },
+  { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 },
+  { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 },
+  { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 },
+  { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 },
+  { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }, { -1, 0, 64, 0 }
+};
+
+SQ15x16 cameraX = 5.5;
+SQ15x16 cameraY = 10.5;
+uint8_t cameraAngle = 64;
+SQ15x16 oldCameraX;
+SQ15x16 oldCameraY;
+
+bool showText = true;
+
+void setup()
+{
   arduboy.begin();
   arduboy.setFrameRate(30);
-  arduboy.display();
-  arduboy.initRandomSeed();
-  if (arduboy.audio.enabled()) arduboy.audio.on();
-  else arduboy.audio.off();
-  arduboy.tunes.tone(987, 160);
-  delay(160);
-  arduboy.tunes.tone(1318, 400);
 }
-void loop() {
-  if ((!arduboy.nextFrame())) return;
-  arduboy.clear();
-  switch (state) {
-    case 0: {
-        arduboy.setCursor(18, 22);
-        arduboy.setTextSize(2);
-        arduboy.print("BREAKOUT");
-        arduboy.setTextSize(1);
-        arduboy.setCursor(31, 53);
-        if (arduboy.everyXFrames(15)) flash = !flash;
-        if (flash)arduboy.print("PRESS FIRE!");
-        if (arduboy.pressed(B_BUTTON) && released) {
-          released = false;
-          state = 1;
-          xPaddle = 50;
-        }
-        if (arduboy.pressed(A_BUTTON) && released) {
-          released = false;
-          state = 3;
-        }
-        if ((arduboy.pressed(UP_BUTTON) || arduboy.pressed(DOWN_BUTTON)) && released) {
-          released = false;
-          if (arduboy.audio.enabled()) arduboy.audio.off();
-          else arduboy.audio.on();
-          arduboy.audio.saveOnOff();
+
+SQ15x16 SinLookup(uint_fast8_t index)
+{
+  SQ15x16 value;
+  memcpy_P(&value, &sinTable[index], sizeof(SQ15x16));
+  return value;
+}
+
+SQ15x16 Sin(uint8_t brads)
+{
+  const uint8_t quadrant = ((brads & 0xC0) >> 6);
+  const uint8_t index = ((brads & 0x3F) >> 0);
+  switch (quadrant)
+  {
+  case 0: return SinLookup(index);
+  case 1: return SinLookup(63 - index);
+  case 2: return -SinLookup(index);
+  case 3: return -SinLookup(63 - index);
+  default: return 0;
+  }
+}
+
+SQ15x16 Cos(uint16_t brads)
+{
+  const uint8_t quadrant = ((brads & 0xC0) >> 6);
+  const uint8_t index = ((brads & 0x3F) >> 0);
+  switch (quadrant)
+  {
+  case 0: return SinLookup(63 - index);
+  case 1: return -SinLookup(index);
+  case 2: return -SinLookup(63 - index);
+  case 3: return SinLookup(index);
+  default: return 0;
+  }
+}
+
+SQ15x16 TanLookup(uint_fast8_t index)
+{
+  SQ15x16 value;
+  memcpy_P(&value, &tanTable[index], sizeof(SQ15x16));
+  return value;
+}
+
+SQ15x16 Tan(uint8_t brads)
+{
+  const uint8_t quadrant = ((brads & 0xC0) >> 6);
+  const uint8_t index = ((brads & 0x3F) >> 0);
+  switch (quadrant)
+  {
+  case 0: case 2: return TanLookup(index);
+  case 1: case 3: return -TanLookup(63 - index);
+  default: return 0;
+  }
+}
+
+SQ15x16 Cot(uint16_t brads)
+{
+  const uint8_t quadrant = ((brads & 0xC0) >> 6);
+  const uint8_t index = ((brads & 0x3F) >> 0);
+  switch (quadrant)
+  {
+  case 0: case 2: return TanLookup(63 - index);
+  case 1: case 3: return -TanLookup(index);
+  default: return 0;
+  }
+}
+
+uint8_t FindHeight(SQ15x16 d)
+{
+  int8_t l = 0;
+  int8_t r = 31;
+
+  while (l <= r)
+  {
+    int8_t m = l + (r - l) / 2;
+
+    if (heightToDistanceTable[m] == d)
+      return 64 - 2 * m;
+
+    if (heightToDistanceTable[m] < d)
+      l = m + 1;
+    else
+      r = m - 1;
+  }
+
+  if (r < 0)
+    return 64;
+
+  return 64 - 2 * r;
+}
+
+void DrawWallSlice(uint8_t *p, uint8_t h, bool ic)
+{
+  if (h > 64)
+    h = 64;
+
+  uint8_t hh = h / 2;
+  uint8_t c = hh - 1;
+  c /= 8;
+  uint8_t s = 3 - c;
+  uint8_t i = hh % 8;
+  uint8_t u;
+  uint8_t m;
+  uint8_t l;
+  uint8_t u2;
+  uint8_t l2;
+  uint8_t bg = 0xAA;
+  uint8_t bg2 = 0x55;
+
+  if (ic)
+  {
+    u = bg & ~wallData[i];
+    m = ~0xFF;
+    l = bg & ~wallData[i + 8];
+    u2 = bg2 & ~wallData[i];
+    l2 = bg2 & ~wallData[i + 8];
+  }
+  else
+  {
+    u = bg | wallData[i];
+    m = 0xFF;
+    l = bg | wallData[i + 8];
+    u2 = bg2 | wallData[i];
+    l2 = bg2 | wallData[i + 8];
+  }
+  
+  switch (s)
+  {
+    case 3:
+      *p = bg;
+      *(p + 1) = bg2;
+      p += WIDTH;
+    case 2:
+      *p = bg;
+      *(p + 1) = bg2;
+      p += WIDTH;
+    case 1:
+      *p = bg;
+      *(p + 1) = bg2;
+      p += WIDTH;
+    default:
+      break;
+  }
+
+  *p = u;
+  *(p + 1) = u2;
+  p += WIDTH;
+
+  switch (c)
+  {
+    case 3:
+      *p = *(p + 1) = m;
+      p += WIDTH;
+      *p = *(p + 1) = m;
+      p += WIDTH;
+    case 2:
+      *p = *(p + 1) = m;
+      p += WIDTH;
+      *p = *(p + 1) = m;
+      p += WIDTH;
+    case 1:
+      *p = *(p + 1) = m;
+      p += WIDTH;
+      *p = *(p + 1) = m;
+      p += WIDTH;
+    default:
+      break;
+  }
+
+  *p = l;
+  *(p + 1) = l2;
+  p += WIDTH;
+
+  switch (s)
+  {
+    case 3:
+      *p = bg;
+      *(p + 1) = bg2;
+      p += WIDTH;
+    case 2:
+      *p = bg;
+      *(p + 1) = bg2;
+      p += WIDTH;
+    case 1:
+      *p = bg;
+      *(p + 1) = bg2;
+      p += WIDTH;
+    default:
+      break;
+  }
+}
+
+void Update()
+{
+  oldCameraX = cameraX;
+  oldCameraY = cameraY;
+
+  if (arduboy.pressed(UP_BUTTON))
+  {
+    cameraX += 0.133333 * Cos(cameraAngle);
+    cameraY -= 0.133333 * Sin(cameraAngle);
+  }
+
+  if (arduboy.pressed(DOWN_BUTTON))
+  {
+    cameraX -= 0.133333 * Cos(cameraAngle);
+    cameraY += 0.133333 * Sin(cameraAngle);
+  }
+
+  if (arduboy.pressed(LEFT_BUTTON + B_BUTTON))
+  {
+    cameraX += 0.133333 * Cos(cameraAngle + 64);
+    cameraY -= 0.133333 * Sin(cameraAngle + 64);
+  }
+  else if (arduboy.pressed(LEFT_BUTTON))
+  {
+    cameraAngle += 4;
+  }
+
+  if (arduboy.pressed(RIGHT_BUTTON + B_BUTTON))
+  {
+    cameraX -= 0.133333 * Cos(cameraAngle + 64);
+    cameraY += 0.133333 * Sin(cameraAngle + 64);
+  }
+  else if (arduboy.pressed(RIGHT_BUTTON))
+  {
+    cameraAngle -= 4;
+  }
+  
+  uint8_t tx = cameraX.getInteger();
+  uint8_t txm = (cameraX - 0.140625).getInteger();
+  uint8_t txp = (cameraX + 0.140625).getInteger();
+  uint8_t ty = cameraY.getInteger();
+  uint8_t tym = (cameraY - 0.140625).getInteger();
+  uint8_t typ = (cameraY + 0.140625).getInteger();
+  
+  if (cameraX - 0.140625 < 0 || (cameraX + 0.140625).getInteger() >= mapWidth)
+    cameraX = oldCameraX;
+  else if (pgm_read_byte(&mapData[ty * mapWidth + txp]) == 1 || pgm_read_byte(&mapData[ty * mapWidth + txm]) == 1)
+    cameraX = oldCameraX;
+  else
+  {
+    if (pgm_read_byte(&mapData[typ * mapWidth + tx]) == 1)
+      cameraY = typ - 0.140625;
+
+    if (pgm_read_byte(&mapData[tym * mapWidth + tx]) == 1)
+      cameraY = tym + 1.140625;
+  }
+
+  if (cameraY - 0.140625 < 0 || (cameraY + 0.140625).getInteger() >= mapHeight)
+    cameraY = oldCameraY;
+  else if (pgm_read_byte(&mapData[typ * mapWidth + tx]) == 1 || pgm_read_byte(&mapData[tym * mapWidth + tx]) == 1)
+    cameraY = oldCameraY;
+  else
+  {
+    if (pgm_read_byte(&mapData[ty * mapWidth + txp]) == 1)
+      cameraX = txp - 0.140625;
+
+    if (pgm_read_byte(&mapData[ty * mapWidth + txm]) == 1)
+      cameraX = txm + 1.140625;
+  }
+
+  int16_t mapIndex = (ty - 1) * mapWidth + tx;
+
+  if (pgm_read_byte(&mapData[mapIndex]) == 2)
+  {
+    Door *door = &doors[((ty - 1) % 8) * 8 + (tx % 8)];
+
+    if (door->mapIndex != mapIndex)
+    {
+      door->mapIndex = mapIndex;
+      door->state = 0;
+      door->offset = 64;
+      door->tics = 0;
+    }
+
+    if (door->state == 0 || door->state == 1)
+    {
+      if (door->mapIndex == (ty * mapWidth + txp) || door->mapIndex == (ty * mapWidth + txm))
+        cameraX = oldCameraX;
+
+      if (door->mapIndex == (typ * mapWidth + tx) || door->mapIndex == (tym * mapWidth + tx))
+        cameraY = oldCameraY;
+    }
+  }
+
+  mapIndex = (ty + 1) * mapWidth + tx;
+
+  if (pgm_read_byte(&mapData[mapIndex]) == 2)
+  {
+    Door *door = &doors[((ty + 1) % 8) * 8 + (tx % 8)];
+
+    if (door->mapIndex != mapIndex)
+    {
+      door->mapIndex = mapIndex;
+      door->state = 0;
+      door->offset = 64;
+      door->tics = 0;
+    }
+
+    if (door->state == 0 || door->state == 1)
+    {
+      if (door->mapIndex == (ty * mapWidth + txp) || door->mapIndex == (ty * mapWidth + txm))
+        cameraX = oldCameraX;
+
+      if (door->mapIndex == (typ * mapWidth + tx) || door->mapIndex == (tym * mapWidth + tx))
+        cameraY = oldCameraY;
+    }
+  }
+
+  mapIndex = ty * mapWidth + (tx - 1);
+
+  if (pgm_read_byte(&mapData[mapIndex]) == 2)
+  {
+    Door *door = &doors[(ty % 8) * 8 + ((tx - 1) % 8)];
+
+    if (door->mapIndex != mapIndex)
+    {
+      door->mapIndex = mapIndex;
+      door->state = 0;
+      door->offset = 64;
+      door->tics = 0;
+    }
+
+    if (door->state == 0 || door->state == 1)
+    {
+      if (door->mapIndex == (ty * mapWidth + txp) || door->mapIndex == (ty * mapWidth + txm))
+        cameraX = oldCameraX;
+
+      if (door->mapIndex == (typ * mapWidth + tx) || door->mapIndex == (tym * mapWidth + tx))
+        cameraY = oldCameraY;
+    }
+  }
+
+  mapIndex = ty * mapWidth + (tx + 1);
+
+  if (pgm_read_byte(&mapData[mapIndex]) == 2)
+  {
+    Door *door = &doors[(ty % 8) * 8 + ((tx + 1) % 8)];
+
+    if (door->mapIndex != mapIndex)
+    {
+      door->mapIndex = mapIndex;
+      door->state = 0;
+      door->offset = 64;
+      door->tics = 0;
+    }
+
+    if (door->state == 0 || door->state == 1)
+    {
+      if (door->mapIndex == (ty * mapWidth + txp) || door->mapIndex == (ty * mapWidth + txm))
+        cameraX = oldCameraX;
+
+      if (door->mapIndex == (typ * mapWidth + tx) || door->mapIndex == (tym * mapWidth + tx))
+        cameraY = oldCameraY;
+    }
+  }
+
+  for (uint8_t i = 0; i < 64; i++)
+  {
+    Door *door = &doors[i];
+
+    if (door->mapIndex != -1)
+    {
+      if (door->state == 0)
+      {
+        door->tics++;
+
+        if (door->tics == 30)
+        {
+          door->state = 1;
+          door->tics = 0;
         }
       }
-      break;
+      else if (door->state == 1)
+      {
+        door->offset -= 4.266667;
 
-    case 1: {
-        if (lives > 0) {
-          Paddle();
-          Ball();
-          Brick();
-          Statistics();
-        } else {
-          delay(3000);
-          resetlevel();
-          state = 2;
-        }
-        if (arduboy.pressed(A_BUTTON) && released) {
-          released = false;
-          state = 4;
+        if (door->offset < 0)
+        {
+          door->state = 2;
+          door->offset = 0;
         }
       }
-      break;
+      else if (door->state == 2)
+      {
+        if (door->mapIndex != (ty * mapWidth + tx))
+        {
+          door->tics++;
 
-    case 2: {
-        char tmpInitials[3];
-        // Each block of EEPROM has 7 high scores, and each high score entry
-        // is 5 byte long:  3 char for initials and a short for score.
-        // High score processing
-        for (int8_t i = 0; i < 7; i++) {
-          EEPROM.get(100 + (5 * i), tmpScore);
-          if (tmpScore == 0xFFFF) tmpScore = 0;
-          if (score > tmpScore) {
-            enterInitials();
-            for (byte j = i; j < 7; j++) {
-              EEPROM.get(100 + (5 * j), tmpScore);
-              if (tmpScore == 0xFFFF) tmpScore = 0;
-
-              tmpInitials[0] = (char)EEPROM.read(100 + (5 * j) + 2);
-              tmpInitials[1] = (char)EEPROM.read(100 + (5 * j) + 3);
-              tmpInitials[2] = (char)EEPROM.read(100 + (5 * j) + 4);
-
-              // write score and initials to current slot
-              EEPROM.put(100 + (5 * j), score);
-              EEPROM.write(100 + (5 * j) + 2, initials[0]);
-              EEPROM.write(100 + (5 * j) + 3, initials[1]);
-              EEPROM.write(100 + (5 * j) + 4, initials[2]);
-
-              // tmpScore and tmpInitials now hold what we want to
-              //write in the next slot.
-              score = tmpScore;
-              initials[0] = tmpInitials[0];
-              initials[1] = tmpInitials[1];
-              initials[2] = tmpInitials[2];
-            }
-            //reset the initials
-            initials[0] = ' ';
-            initials[1] = ' ';
-            initials[2] = ' ';
-            break;
+          if (door->tics == 30)
+          {
+            door->state = 3;
+            door->tics = 0;
           }
         }
       }
-      resetGame();
-      break;
-    case 3:
-      // Each block of EEPROM has 7 high scores, and each high score entry
-      // is 5 int8_ts long:  3 int8_ts for initials and one int16_t for score
-      arduboy.setCursor(32, 0);
-      arduboy.print("HIGH SCORES");
+      else if (door->state == 3)
+      {
+        door->offset += 4.266667;
 
-      for (int i = 0; i < 7; i++) {
-        EEPROM.get(100 + (5 * i), score);
-        if (score == 0xFFFF) score = 0;
-        initials[0] = (char)EEPROM.read(100 + (5 * i) + 2);
-        initials[1] = (char)EEPROM.read(100 + (5 * i) + 3);
-        initials[2] = (char)EEPROM.read(100 + (5 * i) + 4);
-
-        arduboy.setCursor(30, 9 + (i * 8));
-        arduboy.setTextSize(1);
-        arduboy.print(i + 1);
-        arduboy.print(" ");
-        arduboy.print(initials[0]);
-        arduboy.print(initials[1]);
-        arduboy.print(initials[2]);
-        arduboy.print(" ");
-        arduboy.print(score);
-
-        score = 0;
-      }
-      if (arduboy.pressed(A_BUTTON) && released) {
-        released = false;
-        state = 0;
-      }
-
-      if (arduboy.pressed(LEFT_BUTTON) && released) {
-        released = false;
-        state = 5;
-      }
-      break;
-    case 4:
-      arduboy.setCursor(32, 30);
-      arduboy.setTextSize(2);
-      arduboy.print("PAUSE");
-      if (arduboy.pressed(B_BUTTON) && released) {
-        released = false;
-        state = 1;
-      }
-      if (arduboy.pressed(A_BUTTON) && released) {
-        released = false;
-        resetGame();
-      }
-      if ((arduboy.pressed(UP_BUTTON) || arduboy.pressed(DOWN_BUTTON)) && released) {
-        released = false;
-        if (arduboy.audio.enabled()) arduboy.audio.off();
-        else arduboy.audio.on();
-        arduboy.audio.saveOnOff();
-      }
-      break;
-    case 5:
-      arduboy.setCursor(14, 32);
-      arduboy.setTextSize(1);
-      arduboy.print(F("EREASE HIGHSCORE?"));
-      arduboy.setCursor(14, 40);
-      arduboy.print(F("START = RIGHT + B"));
-      if (arduboy.pressed(RIGHT_BUTTON + B_BUTTON)) {
-        released = false;
-        for (int i = 0; i < 35; i ++) {
-          arduboy.clear();
-          arduboy.setCursor(36, HEIGHT / 2);
-          arduboy.print(F("WORKING..."));
-          arduboy.display();
-          EEPROM.update(i + 100, 0xff);
+        if (door->offset > 64)
+        {
+          door->mapIndex = -1;
+          door->state = 0;
+          door->offset = 64;
         }
-        delay(500);
-        arduboy.setCursor(32, HEIGHT / 2);
-        arduboy.clear();
-        arduboy.print(F("EREASE DONE"));
-        arduboy.display();
-        delay(1000);
-        state = 0;
+      }
+    }
+  }
+}
 
+void Render()
+{
+  uint8_t *p = arduboy.sBuffer;
+
+  uint8_t rayAngle = cameraAngle + 31;
+
+  for (uint8_t i = 0; i < 128; i += 2)
+  {
+    SQ15x16 horizontalIntersectionY;
+    SQ15x16 stepY;
+
+    if (rayAngle < 128)
+    {
+      horizontalIntersectionY = floorFixed(cameraY);
+      stepY = -1;
+    }
+    else
+    {
+      horizontalIntersectionY = floorFixed(cameraY) + 1;
+      stepY = 1;
+    }
+
+    SQ15x16 horizontalIntersectionX = cameraX - (horizontalIntersectionY - cameraY) * Cot(rayAngle);
+    SQ15x16 stepX = -stepY * Cot(rayAngle);
+    SQ15x16 horizontalIntersectionDistance;
+    uint8_t horizontalIntersectionType;
+
+    if (rayAngle == 0 || rayAngle == 128)
+      horizontalIntersectionDistance = SQ15x16::MaxValue;
+    else
+    {
+      while (1)
+      {
+        int8_t gridX = horizontalIntersectionX.getInteger();
+        int8_t gridY = horizontalIntersectionY.getInteger() - (stepY < 0 ? 1 : 0);
+
+        if (gridX < 0 || gridY < 0 || gridX >= mapWidth || gridY >= mapHeight)
+        {
+          horizontalIntersectionDistance = SQ15x16::MaxValue;
+          break;
+        }
+
+        horizontalIntersectionType = pgm_read_byte(&mapData[gridY * mapWidth + gridX]);
+        
+        if (horizontalIntersectionType == 1)
+        {
+          horizontalIntersectionDistance = (horizontalIntersectionX - cameraX) * Cos(cameraAngle) - (horizontalIntersectionY - cameraY) * Sin(cameraAngle);
+          break;
+        }
+        else if (horizontalIntersectionType == 2 && ((64 * (horizontalIntersectionX + 0.5 * stepX)).getInteger() % 64) < (doors[(gridY % 8) * 8 + (gridX % 8)].mapIndex == (gridY * mapWidth + gridX) ? doors[(gridY % 8) * 8 + (gridX % 8)].offset.getInteger() : 64))
+        {
+          horizontalIntersectionX += 0.5 * stepX;
+          horizontalIntersectionY += 0.5 * stepY;
+          horizontalIntersectionDistance = (horizontalIntersectionX - cameraX) * Cos(cameraAngle) - (horizontalIntersectionY - cameraY) * Sin(cameraAngle);
+          break;
+        }
+
+        horizontalIntersectionX += stepX;
+        horizontalIntersectionY += stepY;
       }
-      if (arduboy.pressed(LEFT_BUTTON) && released) {
-        released = false;
-        state = 0;
+    }
+
+    SQ15x16 verticalIntersectionX;
+
+    if (rayAngle >= 64 && rayAngle < 192)
+    {
+      verticalIntersectionX = floorFixed(cameraX);
+      stepX = -1;
+    }
+    else
+    {
+      verticalIntersectionX = floorFixed(cameraX) + 1;
+      stepX = 1;
+    }
+
+    SQ15x16 verticalIntersectionY = cameraY - (verticalIntersectionX - cameraX) * Tan(rayAngle);
+    stepY = -stepX * Tan(rayAngle);
+    SQ15x16 verticalIntersectionDistance;
+    uint8_t verticalIntersectionType;
+
+    if (rayAngle == 64 || rayAngle == 192)
+      verticalIntersectionDistance = SQ15x16::MaxValue;
+    else
+    {
+      while (1)
+      {
+        int8_t gridX = verticalIntersectionX.getInteger() - (stepX < 0 ? 1 : 0);
+        int8_t gridY = verticalIntersectionY.getInteger();
+
+        if (gridX < 0 || gridY < 0 || gridX >= mapWidth || gridY >= mapHeight)
+        {
+          verticalIntersectionDistance = SQ15x16::MaxValue;
+          break;
+        }
+
+        verticalIntersectionType = pgm_read_byte(&mapData[gridY * mapWidth + gridX]);
+        
+        if (verticalIntersectionType == 1)
+        {
+          verticalIntersectionDistance = (verticalIntersectionX - cameraX) * Cos(cameraAngle) - (verticalIntersectionY - cameraY) * Sin(cameraAngle);
+          break;
+        }
+        else if (verticalIntersectionType == 2 && ((64 * (verticalIntersectionY + 0.5 * stepY)).getInteger() % 64) < (doors[(gridY % 8) * 8 + (gridX % 8)].mapIndex == (gridY * mapWidth + gridX) ? doors[(gridY % 8) * 8 + (gridX % 8)].offset.getInteger() : 64))
+        {
+          verticalIntersectionX += 0.5 * stepX;
+          verticalIntersectionY += 0.5 * stepY;
+          verticalIntersectionDistance = (verticalIntersectionX - cameraX) * Cos(cameraAngle) - (verticalIntersectionY - cameraY) * Sin(cameraAngle);
+          break;
+        }
+
+        verticalIntersectionX += stepX;
+        verticalIntersectionY += stepY;
       }
-      break;
+    }
+
+    SQ15x16 distance;
+    bool invertColor;
+
+    if (horizontalIntersectionDistance < verticalIntersectionDistance)
+    {
+      distance = horizontalIntersectionDistance;
+      invertColor = false;
+    }
+    else
+    {
+      distance = verticalIntersectionDistance;
+      invertColor = true;
+    }
+
+    uint8_t wallHeight = FindHeight(distance);
+    
+    DrawWallSlice(p, wallHeight, invertColor);
+ 
+    rayAngle--;
+
+    p += 2;
   }
-  if (arduboy.audio.enabled()) {
-    arduboy.drawRect(WIDTH - 3, HEIGHT - 2, 2, 2, 1);
-    arduboy.drawLine(WIDTH - 2, HEIGHT - 5, WIDTH - 2, HEIGHT - 1, 1);
-    arduboy.drawPixel(WIDTH - 1, HEIGHT - 4, 1);
+}
+
+void ShowText()
+{
+  arduboy.clear();
+  arduboy.setCursor(37, 20);
+  arduboy.print(F("Squirrel 3D Engine"));
+  arduboy.setCursor(10, 28);
+  arduboy.print(F("Copyright 2021 to 22 Squirrel Enterprises"));
+  arduboy.setCursor(7, 36);
+  arduboy.print(F("Press A to continue"));
+}
+
+void loop()
+{
+  if (!(arduboy.nextFrame()))
+    return;
+
+  if (showText)
+  {
+    ShowText();
+
+    arduboy.pollButtons();
+
+    if (arduboy.justPressed(A_BUTTON))
+      showText = false;
   }
-  if (arduboy.notPressed(UP_BUTTON) && arduboy.notPressed(DOWN_BUTTON) && arduboy.notPressed(LEFT_BUTTON) &&
-      arduboy.notPressed(RIGHT_BUTTON) && arduboy.notPressed(A_BUTTON) && arduboy.notPressed(B_BUTTON))
-    released = true;
+  else
+  {
+    Update();
+    Render();
+  }
+
   arduboy.display();
 }
